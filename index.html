@@ -84,11 +84,11 @@
   // Модели
   const MODELS = {
     ripeness: {
-      url: "https://teachablemachine.withgoogle.com/models/-gv8z_sYx/",
+      url: "https://teachablemachine.withgoogle.com/models/-gv8z_sYx",
       classes: ["Спелые", "Неспелые"]
     },
     variety: {
-      url: "https://teachablemachine.withgoogle.com/models/MNBTmzjUq/",
+      url: "https://teachablemachine.withgoogle.com/models/MNBTmzjUq",
       classes: [], // будет заполнено автоматически
       details: {}  // будет заполнено автоматически
     }
@@ -355,7 +355,10 @@
 
     // Обработчики кнопок
     document.getElementById('start').addEventListener('click', () => {
-        startCamera();
+      startCamera(); // запускаем камеру сразу
+      if (!model) {
+        loadModel(); // загружаем модель асинхронно
+      }
     });
     document.getElementById('stop').addEventListener('click', () => {
         stopCamera();
@@ -390,6 +393,7 @@
     </script>
     </body>
     </html>
+
 
 
 
