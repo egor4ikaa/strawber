@@ -88,9 +88,9 @@
       classes: ["Спелые", "Неспелые"]
     },
     variety: {
-      url: "https://teachablemachine.withgoogle.com/models/MNBTmzjUq/", // замените на правильный URL
-      classes: [], // будет загружены динамически
-      details: {}
+      url: "https://teachablemachine.withgoogle.com/models/MNBTmzjUq/",
+      classes: [], // будет заполнено автоматически
+      details: {}  // будет заполнено автоматически
     }
   };
 
@@ -168,20 +168,26 @@
       maxPredictions = model.getTotalClasses();
 
       if (currentMode === 'variety') {
-        // Загрузка деталей сортов
-        // Замените на свои данные
         MODELS.variety.details = {
-          "Сорт1": {
-            desc: "Описание сорта 1",
-            period: "Июль - Август",
-            weight: "10-15 г",
-            img: "https://example.com/sort1.jpg"
+          "Даренка": {
+            desc: "Ранний сорт с высокой урожайностью и кисло-сладкими ягодами.",
+            period: "Июнь - Июль",
+            weight: "10–35 г"
           },
-          "Сорт2": {
-            desc: "Описание сорта 2",
+          "Мурано": {
+            desc: "Поздний ремонтантный сорт с крупными ягодами и плотной мякотью.",
             period: "Июль - Сентябрь",
-            weight: "12-18 г",
-            img: "https://example.com/sort2.jpg"
+            weight: "15–50 г"
+          },
+          "Клери": {
+            desc: "Один из самых популярных ранних сортов, устойчив к болезням.",
+            period: "Июнь - Июль",
+            weight: "15–40 г"
+          },
+          "Рубиновый Кулон": { // ← Обязательно так же, как в модели!
+            desc: "Среднепоздний сорт с очень крупными ярко-красными ягодами.",
+            period: "Июль - Август",
+            weight: "15–70 г"
           }
         };
         MODELS.variety.classes = Object.keys(MODELS.variety.details);
@@ -218,46 +224,42 @@
 
   // Запуск камеры с выбранным устройством
     async function startCamera() {
-        try {
+          try {
             await getVideoDevices();
-
-            // Останавливаем старое видео, если есть
+        
             if (webcam) {
-                webcam.stop();
+              webcam.stop();
+              webcam = null;
             }
-
-            // Создаем новую модель
-            const constraints = {
-                deviceId: currentDeviceId ? { exact: currentDeviceId } : undefined,
-                facingMode: "environment"
-            };
-
-            webcam = new tmImage.Webcam(400, 400, true); // width, height, flip
+        
+            const constraints = currentDeviceId 
+              ? { deviceId: { exact: currentDeviceId } } 
+              : { facingMode: "environment" };
+        
+            const videoElement = document.getElementById('webcam');
+            webcam = new tmImage.Webcam(400, 400, true, videoElement); // ← передаём элемент
             await webcam.setup(constraints);
             await webcam.play();
-
-            // Используем canvas от webcam вместо прямого назначения srcObject
-            document.getElementById('webcam').srcObject = webcam.webcamStream;
-
+        
             startBtn.style.display = 'none';
             stopBtn.style.display = 'inline-block';
-            switchBtn.style.display = 'inline-block';
-
-            // Запускаем цикл предсказания
+            switchBtn.style.display = devices.filter(d => d.kind === 'videoinput').length > 1 ? 'inline-block' : 'none';
+        
             loop();
-        } catch (err) {
-            alert('Ошибка доступа к камере: ' + err);
-            console.error(err);
+          } catch (err) {
+            console.error("Ошибка камеры:", err);
+            alert('Не удалось получить доступ к камере. Разрешите доступ и убедитесь, что сайт работает по HTTPS.');
+          }
         }
-    }
 
         function stopCamera() {
         if (webcam) {
-            webcam.stop();
-            document.getElementById('webcam').srcObject = null;
-            startBtn.style.display = 'inline-block';
-            stopBtn.style.display = 'none';
-            switchBtn.style.display = 'none';
+          webcam.stop(); // это остановит поток и освободит камеру
+          webcam = null;
+        }
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+        switchBtn.style.display = 'none';
         }
         }
 
@@ -388,4 +390,5 @@
     </script>
     </body>
     </html>
+
 
