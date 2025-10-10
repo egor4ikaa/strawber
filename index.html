@@ -373,22 +373,20 @@
 
         // Загрузка модели Teachable Machine
         async function loadModel() {
-            // URL модели из Teachable Machine (замените на свой)
-            const modelURL = './model/model.json';
-            const metadataURL = './model/metadata.json';
-
-            try {
-                loader.style.display = 'block';
-                // Загрузка модели и метаданных
-                model = await tmImage.load(modelURL, metadataURL);
-                console.log('Модель загружена успешно');
-                loader.style.display = 'none';
-            } catch (error) {
-                console.error('Ошибка загрузки модели:', error);
-                alert('Не удалось загрузить модель распознавания. Пожалуйста, проверьте подключение к интернету.');
-                loader.style.display = 'none';
-            }
+        const modelURL = 'https://egor4ikaa.github.io/strawber/model/model.json';
+        const metadataURL = 'https://egor4ikaa.github.io/strawber/model/metadata.json';
+    
+        try {
+            loader.style.display = 'block';
+            model = await tmImage.load(modelURL, metadataURL);
+            console.log('✅ Модель загружена успешно');
+            loader.style.display = 'none';
+        } catch (error) {
+            console.error('❌ Ошибка загрузки модели:', error);
+            alert('Не удалось загрузить модель. Проверьте URL.');
+            loader.style.display = 'none';
         }
+    }
 
         // Инициализация при загрузке страницы
         window.addEventListener('DOMContentLoaded', () => {
@@ -547,3 +545,4 @@
     </script>
 </body>
 </html>
+
