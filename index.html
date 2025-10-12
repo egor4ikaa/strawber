@@ -376,28 +376,40 @@
     let stream = null;
     let currentFacingMode = 'environment';
 
-    async function startCamera(facingMode = 'environment') {
+        async function startCamera(facingMode = 'environment') {
         try {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
-
+    
             const constraints = {
                 video: {
                     facingMode: { ideal: facingMode }
                 }
             };
-
+    
             stream = await navigator.mediaDevices.getUserMedia(constraints);
             cameraStream.srcObject = stream;
-
+    
+            // Скрыть всё, показать камеру
             previewPlaceholder.style.display = 'none';
             previewImage.style.display = 'none';
             cameraView.style.display = 'none';
             cameraContainer.style.display = 'flex';
-
-            currentFacingMode = facingMode;
             analyzeBtn.disabled = true;
+    
+            // 🔥 Отключить кнопку "Сделать снимок", пока видео не готово
+            captureBtn.disabled = true;
+            captureBtn.textContent = '⏳ Камера загружается...';
+    
+            // Ждём, пока видео получит размеры
+            cameraStream.onloadedmetadata = () => {
+                // Теперь можно делать снимок
+                captureBtn.disabled = false;
+                captureBtn.innerHTML = '<i>📸</i> Сделать снимок';
+                currentFacingMode = facingMode;
+            };
+    
         } catch (error) {
             console.error('Ошибка доступа к камере:', error);
             if (facingMode === 'environment') {
@@ -471,25 +483,38 @@
         startCamera(currentFacingMode === 'environment' ? 'user' : 'environment');
     });
     // Обработчик захвата фото с камеры
+    // Обработчик захвата фото с камеры
     captureBtn.addEventListener('click', () => {
+        const video = cameraStream;
+        
+        // Проверка: готово ли видео к использованию
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+            alert('Камера ещё не готова. Подождите 1-2 секунды и повторите попытку.');
+            return;
+        }
+    
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-
-        const video = cameraStream;
+    
+        // Устанавливаем размеры canvas по реальным размерам видео
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
+    
+        // Рисуем кадр
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        cameraView.src = canvas.toDataURL('image/jpeg', 0.9);
+    
+        // Сохраняем изображение
+        cameraView.src = canvas.toDataURL('image/jpeg', 0.92);
         cameraView.style.display = 'block';
         cameraContainer.style.display = 'none';
-
+    
         currentImage = cameraView;
         analyzeBtn.disabled = false;
-
+    
+        // Останавливаем поток
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
-            stream = null; // 👈 важно: сбросить ссылку
+            stream = null;
         }
     });
 
@@ -576,4 +601,5 @@
 </script>
 </body>
 </html>
+
 
