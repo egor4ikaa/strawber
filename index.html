@@ -353,6 +353,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
 
 <script>
+    
     // Элементы DOM
     const uploadBtn = document.getElementById('uploadBtn');
     const cameraBtn = document.getElementById('cameraBtn');
@@ -378,6 +379,7 @@
 
         async function startCamera(facingMode = 'environment') {
         try {
+            resetResults();
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
@@ -450,6 +452,7 @@
 
     // Обработчик загрузки изображения
     uploadBtn.addEventListener('click', () => {
+        resetResults(); 
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
@@ -492,6 +495,7 @@
             alert('Камера ещё не готова. Подождите 1-2 секунды и повторите попытку.');
             return;
         }
+        resetResults(); 
     
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
@@ -545,6 +549,15 @@
             loader.style.display = 'none';
         }
     });
+
+        function resetResults() {
+        resultSection.style.display = 'none';
+        predictionResults.innerHTML = '';
+        infoText.textContent = 'Информация появится после определения сорта';
+        resultImage.src = '';
+        currentImage = null;
+        analyzeBtn.disabled = true;
+    }
 
     // Функция отображения результатов
     function displayResults(predictions) {
@@ -601,5 +614,6 @@
 </script>
 </body>
 </html>
+
 
 
