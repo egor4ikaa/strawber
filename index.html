@@ -346,205 +346,208 @@
         <p>Приложение для распознавания сортов клубники с использованием Teachable Machine</p>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
-    <script>
-        // Элементы DOM
-        const uploadBtn = document.getElementById('uploadBtn');
-        const cameraBtn = document.getElementById('cameraBtn');
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const captureBtn = document.getElementById('captureBtn');
-        const previewContainer = document.querySelector('.preview-container');
-        const previewPlaceholder = document.querySelector('.preview-placeholder');
-        const previewImage = document.getElementById('previewImage');
-        const cameraView = document.getElementById('cameraView');
-        const cameraContainer = document.getElementById('cameraContainer');
-        const cameraStream = document.getElementById('cameraStream');
-        const resultSection = document.getElementById('resultSection');
-        const resultImage = document.getElementById('resultImage');
-        const predictionResults = document.getElementById('predictionResults');
-        const infoText = document.getElementById('infoText');
-        const loader = document.getElementById('loader');
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
 
-        // Переменные для хранения состояния
-        let currentImage = null;
-        let model = null;
-        let stream = null;
+<script>
+    // Элементы DOM
+    const uploadBtn = document.getElementById('uploadBtn');
+    const cameraBtn = document.getElementById('cameraBtn');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const previewContainer = document.querySelector('.preview-container');
+    const previewPlaceholder = document.querySelector('.preview-placeholder');
+    const previewImage = document.getElementById('previewImage');
+    const cameraView = document.getElementById('cameraView');
+    const cameraContainer = document.getElementById('cameraContainer');
+    const cameraStream = document.getElementById('cameraStream');
+    const resultSection = document.getElementById('resultSection');
+    const resultImage = document.getElementById('resultImage');
+    const predictionResults = document.getElementById('predictionResults');
+    const infoText = document.getElementById('infoText');
+    const loader = document.getElementById('loader');
 
-        // Загрузка модели Teachable Machine
+    // Переменные для хранения состояния
+    let currentImage = null;
+    let model = null;
+    let stream = null;
+
+    // Загрузка модели при загрузке страницы
+    window.addEventListener('DOMContentLoaded', () => {
+        if (typeof tmImage === 'undefined') {
+            console.error('Teachable Machine библиотека не загружена!');
+            alert('Не удалось загрузить библиотеку. Проверьте подключение скриптов.');
+            return;
+        }
+
         async function loadModel() {
-        loader.style.display = 'block';
-    
-        // Заглушка модели — работает везде, включая GitHub Pages
-        setTimeout(() => {
-            model = {
-                predict: async (img) => [
-                    { className: "Клери", probability: 0.90 },
-                    { className: "Даренка", probability: 0.07 },
-                    { className: "Рубиновый кулон", probability: 0.03 }
-                ]
-            };
-            console.log('Модель загружена (заглушка)');
-            loader.style.display = 'none';
-        }, 1000);
-    }
-
-        // Инициализация при загрузке страницы
-        window.addEventListener('DOMContentLoaded', () => {
-            loadModel();
-        });
-
-        // Обработчик загрузки изображения
-        uploadBtn.addEventListener('click', () => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-
-            input.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-
-                    reader.onload = (event) => {
-                        previewPlaceholder.style.display = 'none';
-                        previewImage.src = event.target.result;
-                        previewImage.style.display = 'block';
-                        cameraView.style.display = 'none';
-                        cameraContainer.style.display = 'none';
-
-                        currentImage = previewImage;
-                        analyzeBtn.disabled = false;
-                    };
-
-                    reader.readAsDataURL(file);
-                }
-            });
-
-            input.click();
-        });
-
-        // Обработчик включения камеры
-        cameraBtn.addEventListener('click', async () => {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                cameraStream.srcObject = stream;
-
-                previewPlaceholder.style.display = 'none';
-                previewImage.style.display = 'none';
-                cameraView.style.display = 'none';
-                cameraContainer.style.display = 'flex';
-
-                analyzeBtn.disabled = true;
-            } catch (error) {
-                console.error('Ошибка доступа к камере:', error);
-                alert('Не удалось получить доступ к камере. Пожалуйста, проверьте разрешения.');
-            }
-        });
-
-        // Обработчик захвата фото с камеры
-        captureBtn.addEventListener('click', () => {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-
-            canvas.width = cameraStream.videoWidth;
-            canvas.height = cameraStream.videoHeight;
-            context.drawImage(cameraStream, 0, 0, canvas.width, canvas.height);
-
-            cameraView.src = canvas.toDataURL('image/png');
-            cameraView.style.display = 'block';
-            cameraContainer.style.display = 'none';
-
-            currentImage = cameraView;
-            analyzeBtn.disabled = false;
-
-            // Остановка потока камеры
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-        });
-
-        // Обработчик анализа изображения
-        analyzeBtn.addEventListener('click', async () => {
-            if (!currentImage || !model) {
-                alert('Пожалуйста, загрузите изображение и убедитесь, что модель загружена.');
-                return;
-            }
+            const modelURL = 'model/model.json';
+            const metadataURL = 'model/metadata.json';
 
             try {
                 loader.style.display = 'block';
-
-                // Предсказание с использованием модели
-                const predictions = await model.predict(currentImage);
-
-                // Отображение результатов
-                displayResults(predictions);
-
+                model = await tmImage.load(modelURL, metadataURL);
+                console.log('✅ Модель загружена успешно');
                 loader.style.display = 'none';
-                resultSection.style.display = 'block';
-
-                // Прокрутка к результатам
-                resultSection.scrollIntoView({ behavior: 'smooth' });
             } catch (error) {
-                console.error('Ошибка при распознавании:', error);
-                alert('Произошла ошибка при распознавании изображения.');
+                console.error('❌ Ошибка загрузки модели:', error);
+                alert('Не удалось загрузить модель. Убедитесь, что файлы model.json и model.weights.bin доступны по пути "model/".');
                 loader.style.display = 'none';
+            }
+        }
+
+        loadModel();
+    });
+
+    // Обработчик загрузки изображения
+    uploadBtn.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+
+        input.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = (event) => {
+                    previewPlaceholder.style.display = 'none';
+                    previewImage.src = event.target.result;
+                    previewImage.style.display = 'block';
+                    cameraView.style.display = 'none';
+                    cameraContainer.style.display = 'none';
+
+                    currentImage = previewImage;
+                    analyzeBtn.disabled = false;
+                };
+
+                reader.readAsDataURL(file);
             }
         });
 
-        // Функция отображения результатов
-        function displayResults(predictions) {
-            // Очистка предыдущих результатов
-            predictionResults.innerHTML = '';
+        input.click();
+    });
 
-            // Сортировка предсказаний по уверенности
-            predictions.sort((a, b) => b.probability - a.probability);
+    // Обработчик включения камеры
+    cameraBtn.addEventListener('click', async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            cameraStream.srcObject = stream;
 
-            // Отображение топ-3 предсказаний
-            const topPredictions = predictions.slice(0, 3);
+            previewPlaceholder.style.display = 'none';
+            previewImage.style.display = 'none';
+            cameraView.style.display = 'none';
+            cameraContainer.style.display = 'flex';
 
-            topPredictions.forEach(prediction => {
-                const predictionItem = document.createElement('div');
-                predictionItem.className = 'prediction-item';
+            analyzeBtn.disabled = true;
+        } catch (error) {
+            console.error('Ошибка доступа к камере:', error);
+            alert('Не удалось получить доступ к камере. Пожалуйста, проверьте разрешения.');
+        }
+    });
 
-                const predictionName = document.createElement('div');
-                predictionName.className = 'prediction-name';
-                predictionName.textContent = prediction.className;
+    // Обработчик захвата фото с камеры
+    captureBtn.addEventListener('click', () => {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
 
-                const predictionConfidence = document.createElement('div');
-                predictionConfidence.className = 'prediction-confidence';
-                predictionConfidence.textContent = `${(prediction.probability * 100).toFixed(2)}%`;
+        canvas.width = cameraStream.videoWidth;
+        canvas.height = cameraStream.videoHeight;
+        context.drawImage(cameraStream, 0, 0, canvas.width, canvas.height);
 
-                predictionItem.appendChild(predictionName);
-                predictionItem.appendChild(predictionConfidence);
-                predictionResults.appendChild(predictionItem);
-            });
+        cameraView.src = canvas.toDataURL('image/png');
+        cameraView.style.display = 'block';
+        cameraContainer.style.display = 'none';
 
-            // Отображение изображения результата
-            resultImage.src = currentImage.src;
+        currentImage = cameraView;
+        analyzeBtn.disabled = false;
 
-            // Отображение информации о сорте
-            const topPrediction = topPredictions[0];
-            displayStrawberryInfo(topPrediction.className);
+        // Остановка потока камеры
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+
+    // Обработчик анализа изображения
+    analyzeBtn.addEventListener('click', async () => {
+        if (!currentImage || !model) {
+            alert('Пожалуйста, загрузите изображение и убедитесь, что модель загружена.');
+            return;
         }
 
-        // Функция отображения информации о сорте клубники
-        function displayStrawberryInfo(strawberryType) {
-            // Информация о сортах клубники
-            const info = {
-                'Клери': 'Ранний сорт итальянской селекции. Ягоды среднего размера, конической формы, темно-красного цвета. Вкус сладкий, с легкой кислинкой. Устойчив к болезням и транспортировке.',
-                'Даренка': 'Ранний сорт российской селекции. Ягоды крупные, правильной конической формы, ярко-красного цвета. Мякоть плотная, сочная, с насыщенным ароматом. Хорошо переносит морозы.',
-                'Рубиновый кулон': 'Среднепоздний сорт. Ягоды крупные, темно-рубинового цвета, с блеском. Форма округло-коническая. Вкус десертный, сладкий с тонкой кислинкой. Универсального назначения.',
-                'Мурано': 'Среднеранний сорт итальянской селекции. Ягоды крупные, ярко-красные, блестящие. Форма правильная коническая. Мякоть плотная, ароматная. Отличная транспортабельность и лежкость.'
-            };
+        try {
+            loader.style.display = 'block';
 
-            if (info[strawberryType]) {
-                infoText.textContent = info[strawberryType];
-            } else {
-                infoText.textContent = 'Информация о данном сорте клубники временно отсутствует в нашей базе данных.';
-            }
+            // Предсказание с использованием модели
+            const predictions = await model.predict(currentImage);
+
+            // Отображение результатов
+            displayResults(predictions);
+
+            loader.style.display = 'none';
+            resultSection.style.display = 'block';
+
+            // Прокрутка к результатам
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        } catch (error) {
+            console.error('Ошибка при распознавании:', error);
+            alert('Произошла ошибка при распознавании изображения.');
+            loader.style.display = 'none';
         }
-    </script>
+    });
+
+    // Функция отображения результатов
+    function displayResults(predictions) {
+        // Очистка предыдущих результатов
+        predictionResults.innerHTML = '';
+
+        // Сортировка предсказаний по уверенности
+        predictions.sort((a, b) => b.probability - a.probability);
+
+        // Отображение топ-3 предсказаний
+        const topPredictions = predictions.slice(0, 3);
+
+        topPredictions.forEach(prediction => {
+            const predictionItem = document.createElement('div');
+            predictionItem.className = 'prediction-item';
+
+            const predictionName = document.createElement('div');
+            predictionName.className = 'prediction-name';
+            predictionName.textContent = prediction.className;
+
+            const predictionConfidence = document.createElement('div');
+            predictionConfidence.className = 'prediction-confidence';
+            predictionConfidence.textContent = `${(prediction.probability * 100).toFixed(2)}%`;
+
+            predictionItem.appendChild(predictionName);
+            predictionItem.appendChild(predictionConfidence);
+            predictionResults.appendChild(predictionItem);
+        });
+
+        // Отображение изображения результата
+        resultImage.src = currentImage.src;
+
+        // Отображение информации о сорте
+        const topPrediction = topPredictions[0];
+        displayStrawberryInfo(topPrediction.className);
+    }
+
+    // Функция отображения информации о сорте клубники
+    function displayStrawberryInfo(strawberryType) {
+        // Информация о сортах клубники
+        const info = {
+            'Клери': 'Ранний сорт итальянской селекции. Ягоды среднего размера, конической формы, темно-красного цвета. Вкус сладкий, с легкой кислинкой. Устойчив к болезням и транспортировке.',
+            'Даренка': 'Ранний сорт российской селекции. Ягоды крупные, правильной конической формы, ярко-красного цвета. Мякоть плотная, сочная, с насыщенным ароматом. Хорошо переносит морозы.',
+            'Рубиновый кулон': 'Среднепоздний сорт. Ягоды крупные, темно-рубинового цвета, с блеском. Форма округло-коническая. Вкус десертный, сладкий с тонкой кислинкой. Универсального назначения.',
+            'Мурано': 'Среднеранний сорт итальянской селекции. Ягоды крупные, ярко-красные, блестящие. Форма правильная коническая. Мякоть плотная, ароматная. Отличная транспортабельность и лежкость.'
+        };
+
+        if (info[strawberryType]) {
+            infoText.textContent = info[strawberryType];
+        } else {
+            infoText.textContent = 'Информация о данном сорте клубники временно отсутствует в нашей базе данных.';
+        }
+    }
+</script>
 </body>
 </html>
-
-
