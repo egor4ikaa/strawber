@@ -320,6 +320,9 @@
                 <button id="captureBtn" class="btn btn-primary">
                     <i>📸</i> Сделать снимок
                 </button>
+                <button id="switchCameraBtn" class="btn btn-secondary" style="margin-top: 10px;">
+                    <i>🔄</i> Переключить камеру
+                </button>
             </div>
 
             <div class="loader" id="loader"></div>
@@ -371,6 +374,40 @@
     let currentImage = null;
     let model = null;
     let stream = null;
+    let currentFacingMode = 'environment';
+
+    async function startCamera(facingMode = 'environment') {
+        try {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            const constraints = {
+                video: {
+                    facingMode: { ideal: facingMode }
+                }
+            };
+
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            cameraStream.srcObject = stream;
+
+            previewPlaceholder.style.display = 'none';
+            previewImage.style.display = 'none';
+            cameraView.style.display = 'none';
+            cameraContainer.style.display = 'flex';
+
+            currentFacingMode = facingMode;
+            analyzeBtn.disabled = true;
+        } catch (error) {
+            console.error('Ошибка доступа к камере:', error);
+            if (facingMode === 'environment') {
+                alert('Тыльная камера недоступна. Попробуем фронтальную...');
+                startCamera('user');
+            } else {
+                alert('Не удалось получить доступ к камере. Проверьте разрешения.');
+            }
+        }
+    }
 
     // Загрузка модели при загрузке страницы
     window.addEventListener('DOMContentLoaded', () => {
@@ -427,44 +464,32 @@
 
         input.click();
     });
-
-    // Обработчик включения камеры
-    cameraBtn.addEventListener('click', async () => {
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            cameraStream.srcObject = stream;
-
-            previewPlaceholder.style.display = 'none';
-            previewImage.style.display = 'none';
-            cameraView.style.display = 'none';
-            cameraContainer.style.display = 'flex';
-
-            analyzeBtn.disabled = true;
-        } catch (error) {
-            console.error('Ошибка доступа к камере:', error);
-            alert('Не удалось получить доступ к камере. Пожалуйста, проверьте разрешения.');
-        }
+    cameraBtn.addEventListener('click', () => {
+        startCamera('environment'); // всегда начинать с тыльной
     });
-
+     document.getElementById('switchCameraBtn')?.addEventListener('click', () => {
+        startCamera(currentFacingMode === 'environment' ? 'user' : 'environment');
+    });
     // Обработчик захвата фото с камеры
     captureBtn.addEventListener('click', () => {
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
 
-        canvas.width = cameraStream.videoWidth;
-        canvas.height = cameraStream.videoHeight;
-        context.drawImage(cameraStream, 0, 0, canvas.width, canvas.height);
+        const video = cameraStream;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        cameraView.src = canvas.toDataURL('image/png');
+        cameraView.src = canvas.toDataURL('image/jpeg', 0.9);
         cameraView.style.display = 'block';
         cameraContainer.style.display = 'none';
 
         currentImage = cameraView;
         analyzeBtn.disabled = false;
 
-        // Остановка потока камеры
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
+            stream = null; // 👈 важно: сбросить ссылку
         }
     });
 
@@ -551,3 +576,4 @@
 </script>
 </body>
 </html>
+
