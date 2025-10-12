@@ -299,6 +299,9 @@
                 <button id="cameraBtn" class="btn btn-secondary">
                     <i>📷</i> Сделать фото
                 </button>
+                <button id="retakeBtn" class="btn btn-secondary" style="margin-left: 10px;">
+                    <i>🔄</i> Переснять
+                </button>
                 <button id="analyzeBtn" class="btn btn-primary" disabled>
                     <i>🔍</i> Определить сорт
                 </button>
@@ -370,7 +373,12 @@
     const predictionResults = document.getElementById('predictionResults');
     const infoText = document.getElementById('infoText');
     const loader = document.getElementById('loader');
-            
+
+        document.getElementById('retakeBtn').addEventListener('click', () => {
+        resetResults();
+        startCamera(currentFacingMode); // снова открываем камеру
+    });
+    
     function resetResults() {
         resultSection.style.display = 'none';
         predictionResults.innerHTML = '';
@@ -534,11 +542,14 @@
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
     
         // Сохраняем изображение
-        cameraView.src = canvas.toDataURL('image/jpeg', 0.92);
-        cameraView.style.display = 'block';
-        cameraContainer.style.display = 'none';
-    
-        currentImage = cameraView;
+        // Сохраняем изображение в previewImage (для предпросмотра)
+        previewImage.src = canvas.toDataURL('image/jpeg', 0.92);
+        previewImage.style.display = 'block';
+        previewPlaceholder.style.display = 'none';
+        cameraView.style.display = 'none'; // скрываем video-предпросмотр
+        cameraContainer.style.display = 'none'; // скрываем камеру
+        
+        currentImage = previewImage; // теперь currentImage указывает на previewImage
         analyzeBtn.disabled = false;
     
         // Останавливаем поток
@@ -633,6 +644,7 @@
 </script>
 </body>
 </html>
+
 
 
 
